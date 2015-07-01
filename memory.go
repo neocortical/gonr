@@ -81,21 +81,21 @@ func addMemoryMetrics(p *newrelic.Plugin) {
 	nrmetrics.AddGaugeMetric(p, otherSys, nrmetrics.MetricConfig{Name: "Memory/Misc/Other", Unit: "bytes", Value: true})
 
 	nrmetrics.AddMeterMetric(p, pointerLookups, nrmetrics.MetricConfig{
-		Name:   "Pointer Lookups",
+		Name:   "Memory/Events/Pointer Lookups",
 		Unit:   "lookups",
 		Rate1:  true,
 		Rate5:  true,
 		Rate15: true,
 	})
 	nrmetrics.AddMeterMetric(p, mallocs, nrmetrics.MetricConfig{
-		Name:   "Mallocs",
+		Name:   "Memory/Events/Mallocs",
 		Unit:   "mallocs",
 		Rate1:  true,
 		Rate5:  true,
 		Rate15: true,
 	})
 	nrmetrics.AddMeterMetric(p, frees, nrmetrics.MetricConfig{
-		Name:   "Frees",
+		Name:   "Memory/Events/Frees",
 		Unit:   "frees",
 		Rate1:  true,
 		Rate5:  true,

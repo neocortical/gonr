@@ -8,41 +8,55 @@ const defaultPluginName = "GoNR"
 const defaultPluginGUID = "net.neocortical.newrelic.gonr"
 
 type Config struct {
-	Name    string
-	GUID    string
-	Runtime bool
-	Memory  bool
-	GC      bool
-	HTTP    bool
+	Name           string
+	GUID           string
+	License        string
+	ExcludeRuntime bool
+	ExcludeMemory  bool
+	ExcludeGC      bool
 }
 
-var defaultConfig = Config{
-	Runtime: true,
-	Memory:  true,
-	GC:      true,
-	HTTP:    true,
+type GonrAgent interface {
+	Run()
+	Client() *newrelic.Client
+	Plugin() *newrelic.Plugin
 }
 
 // New creates a GoNR NewRelic client with the supplied license key
-func New(license string) (*newrelic.Client, HttpMiddleware) {
-	client := newrelic.New(license)
-	plugin := NewPlugin(defaultConfig)
-
+func New(config Config) GonrAgent {
+	client := newrelic.New(config.License)
+	plugin := newPlugin(config)
 	client.AddPlugin(plugin)
-	return client, nil
+
+	result := &gonrAgent{
+		client: client,
+		plugin: plugin,
+	}
+	return result
 }
 
-// NewWithConfig returns a GoNR NewRelic client configured with the supplied config
-func NewWithConfig(license string, config Config) *newrelic.Client {
-	client := newrelic.New(license)
-	plugin := NewPlugin(config)
-
-	client.AddPlugin(plugin)
-	return client
+type gonrAgent struct {
+	client *newrelic.Client
+	plugin *newrelic.Plugin
 }
 
-// NewPlugin returns a GoNR NewRelic plugin (add to your own client) configured with the supplied config
-func NewPlugin(config Config) *newrelic.Plugin {
+// Run the underlying client
+func (ga *gonrAgent) Run() {
+	ga.client.Run()
+}
+
+// Client retrieves the underlying client to allow for customization
+func (ga *gonrAgent) Client() *newrelic.Client {
+	return ga.client
+}
+
+// Plugin retrives the underlying GoNR plugin object, allowing for customization
+func (ga *gonrAgent) Plugin() *newrelic.Plugin {
+	return ga.plugin
+}
+
+// newPlugin returns a NewRelic plugin configured for GoNR
+func newPlugin(config Config) *newrelic.Plugin {
 	if config.Name == "" {
 		config.Name = defaultPluginName
 	}
@@ -55,19 +69,17 @@ func NewPlugin(config Config) *newrelic.Plugin {
 		GUID: config.GUID,
 	}
 
-	if config.Runtime {
+	if !config.ExcludeRuntime {
 		addRuntimeMetrics(plugin)
 	}
 
-	if config.GC {
+	if !config.ExcludeGC {
 		addGCMetrics(plugin)
 	}
 
-	if config.Memory {
+	if !config.ExcludeMemory {
 		addMemoryMetrics(plugin)
 	}
-
-	// TODO: http
 
 	return plugin
 }

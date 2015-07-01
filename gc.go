@@ -29,12 +29,8 @@ func addGCMetrics(p *newrelic.Plugin) {
 		Name:        "GC/GC Pause Time",
 		Unit:        "pauses",
 		Duration:    time.Microsecond,
-		Min:         true,
-		Max:         true,
 		Mean:        true,
 		Percentiles: []float64{0.5, 0.75, 0.9, 0.99, 0.999},
-		StdDev:      true,
-		Variance:    true,
 	})
 }
 
