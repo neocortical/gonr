@@ -16,6 +16,22 @@ type Config struct {
 	ExcludeGC      bool
 }
 
+var defaultConfig = Config{
+	Name: defaultPluginName,
+	GUID: defaultPluginGUID,
+}
+
+// WithLicense applies an API license key to a config. Ex: DefaultConfig().WithLicense("abc123")
+func (c Config) WithLicense(license string) Config {
+	c.License = license
+	return c
+}
+
+// DefaultConfig returns the default GoNR config (all components, default Name and GUID)
+func DefaultConfig() Config {
+	return defaultConfig
+}
+
 type GonrAgent interface {
 	Run()
 	Client() *newrelic.Client
