@@ -5,7 +5,7 @@ import (
 )
 
 const defaultPluginName = "GoNR"
-const defaultPluginGUID = "net.neocortical.newrelic.gonr"
+const defaultPluginGUID = "net.neocortical.newrelic.GoNR"
 
 type Config struct {
 	Name           string
