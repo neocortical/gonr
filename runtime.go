@@ -15,10 +15,10 @@ import (
 )
 
 func addRuntimeMetrics(p *newrelic.Plugin) {
-	p.AddMetric(newrelic.NewMetric("Runtime/Goroutines", "goroutines", func() (float64, error) { return float64(runtime.NumGoroutine()), nil }))
+	p.AddMetric(newrelic.NewMetric("Runtime/Events/Goroutines", "goroutines", func() (float64, error) { return float64(runtime.NumGoroutine()), nil }))
 
 	var lastNumCgoCall int64
-	p.AddMetric(newrelic.NewMetric("Runtime/CGO Calls", "calls", func() (float64, error) {
+	p.AddMetric(newrelic.NewMetric("Runtime/Events/CGO Calls", "calls", func() (float64, error) {
 		currentNumCgoCall := runtime.NumCgoCall()
 		result := float64(currentNumCgoCall - lastNumCgoCall)
 		lastNumCgoCall = currentNumCgoCall

@@ -23,10 +23,10 @@ func addGCMetrics(p *newrelic.Plugin) {
 	}
 	gcr.Run()
 
-	nrmetrics.AddMeterMetric(p, numGC, nrmetrics.MetricConfig{Name: "GC/GC Rate", Unit: "pauses", Rate1: true, Rate5: true, Rate15: true})
-	nrmetrics.AddMeterMetric(p, pauseDur, nrmetrics.MetricConfig{Name: "GC/GC Pause Rate", Unit: "nanoseconds", Rate1: true, Rate5: true, Rate15: true})
+	nrmetrics.AddMeterMetric(p, numGC, nrmetrics.MetricConfig{Name: "GC/GC Pauses Per Second", Unit: "pauses", Rate1: true, Rate5: true, Rate15: true})
+	nrmetrics.AddMeterMetric(p, pauseDur, nrmetrics.MetricConfig{Name: "GC/GC Pause Time Per Second", Unit: "nanoseconds", Rate1: true, Rate5: true, Rate15: true})
 	nrmetrics.AddHistogramMetric(p, pauseTime, nrmetrics.MetricConfig{
-		Name:        "GC/GC Pause Time",
+		Name:        "GC/GC Time Per Pause",
 		Unit:        "pauses",
 		Duration:    time.Microsecond,
 		Mean:        true,

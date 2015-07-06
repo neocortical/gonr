@@ -14,6 +14,7 @@ var memStats runtime.MemStats
 func addMemoryMetrics(p *newrelic.Plugin) {
 	allocInUse := metrics.NewGauge()
 	allocTotal := metrics.NewGauge()
+	sys := metrics.NewGauge()
 
 	pointerLookups := metrics.NewMeter()
 	mallocs := metrics.NewMeter()
@@ -62,23 +63,29 @@ func addMemoryMetrics(p *newrelic.Plugin) {
 	}
 	mr.Run()
 
-	nrmetrics.AddGaugeMetric(p, allocInUse, nrmetrics.MetricConfig{Name: "Memory/Summary/In Use", Unit: "bytes", Value: true})
-	nrmetrics.AddGaugeMetric(p, allocTotal, nrmetrics.MetricConfig{Name: "Memory/Summary/Total Allocated", Unit: "bytes", Value: true})
+	nrmetrics.AddGaugeMetric(p, allocTotal, nrmetrics.MetricConfig{Name: "Memory/Summary/Allocated Over Time", Unit: "bytes", Value: true})
+
+	nrmetrics.AddGaugeMetric(p, sys, nrmetrics.MetricConfig{Name: "Memory/Summary/System/Total", Unit: "bytes", Value: true})
+	nrmetrics.AddGaugeMetric(p, heapSys, nrmetrics.MetricConfig{Name: "Memory/System/Heap", Unit: "bytes", Value: true})
+	nrmetrics.AddGaugeMetric(p, stackSys, nrmetrics.MetricConfig{Name: "Memory/System/Stack", Unit: "bytes", Value: true})
+	nrmetrics.AddGaugeMetric(p, mspanSys, nrmetrics.MetricConfig{Name: "Memory/System/MSpan", Unit: "bytes", Value: true})
+	nrmetrics.AddGaugeMetric(p, mcacheSys, nrmetrics.MetricConfig{Name: "Memory/System/MCache", Unit: "bytes", Value: true})
+	nrmetrics.AddGaugeMetric(p, buckHashSys, nrmetrics.MetricConfig{Name: "Memory/System/BuckHash", Unit: "bytes", Value: true})
+	nrmetrics.AddGaugeMetric(p, gcSys, nrmetrics.MetricConfig{Name: "Memory/System/GC", Unit: "bytes", Value: true})
+	nrmetrics.AddGaugeMetric(p, otherSys, nrmetrics.MetricConfig{Name: "Memory/System/Other", Unit: "bytes", Value: true})
+
+	nrmetrics.AddGaugeMetric(p, allocInUse, nrmetrics.MetricConfig{Name: "Memory/Summary/In Use/Total", Unit: "bytes", Value: true})
+	nrmetrics.AddGaugeMetric(p, heapInUse, nrmetrics.MetricConfig{Name: "Memory/In Use/Heap", Unit: "bytes", Value: true})
+	nrmetrics.AddGaugeMetric(p, stackInUse, nrmetrics.MetricConfig{Name: "Memory/In Use/Stack", Unit: "bytes", Value: true})
+	nrmetrics.AddGaugeMetric(p, mspanInUse, nrmetrics.MetricConfig{Name: "Memory/In Use/MSpan", Unit: "bytes", Value: true})
+	nrmetrics.AddGaugeMetric(p, mcacheInUse, nrmetrics.MetricConfig{Name: "Memory/In Use/MCache", Unit: "bytes", Value: true})
+
 	nrmetrics.AddGaugeMetric(p, allocHeap, nrmetrics.MetricConfig{Name: "Memory/Heap/Allocated", Unit: "bytes", Value: true})
-	nrmetrics.AddGaugeMetric(p, heapSys, nrmetrics.MetricConfig{Name: "Memory/Heap/System", Unit: "bytes", Value: true})
 	nrmetrics.AddGaugeMetric(p, heapIdle, nrmetrics.MetricConfig{Name: "Memory/Heap/Idle", Unit: "bytes", Value: true})
 	nrmetrics.AddGaugeMetric(p, heapInUse, nrmetrics.MetricConfig{Name: "Memory/Heap/In Use", Unit: "bytes", Value: true})
 	nrmetrics.AddGaugeMetric(p, heapReleased, nrmetrics.MetricConfig{Name: "Memory/Heap/Released", Unit: "bytes", Value: true})
-	nrmetrics.AddGaugeMetric(p, heapObjects, nrmetrics.MetricConfig{Name: "Memory/Heap/Objects", Unit: "objects", Value: true})
-	nrmetrics.AddGaugeMetric(p, stackInUse, nrmetrics.MetricConfig{Name: "Memory/Stack/In Use", Unit: "bytes", Value: true})
-	nrmetrics.AddGaugeMetric(p, stackSys, nrmetrics.MetricConfig{Name: "Memory/Stack/System", Unit: "bytes", Value: true})
-	nrmetrics.AddGaugeMetric(p, mspanInUse, nrmetrics.MetricConfig{Name: "Memory/MSpan/In Use", Unit: "bytes", Value: true})
-	nrmetrics.AddGaugeMetric(p, mspanSys, nrmetrics.MetricConfig{Name: "Memory/MSpan/System", Unit: "bytes", Value: true})
-	nrmetrics.AddGaugeMetric(p, mcacheInUse, nrmetrics.MetricConfig{Name: "Memory/MCache/In Use", Unit: "bytes", Value: true})
-	nrmetrics.AddGaugeMetric(p, mcacheSys, nrmetrics.MetricConfig{Name: "Memory/MCache/System", Unit: "bytes", Value: true})
-	nrmetrics.AddGaugeMetric(p, buckHashSys, nrmetrics.MetricConfig{Name: "Memory/Misc/Buck Hash", Unit: "bytes", Value: true})
-	nrmetrics.AddGaugeMetric(p, gcSys, nrmetrics.MetricConfig{Name: "Memory/Misc/GC", Unit: "bytes", Value: true})
-	nrmetrics.AddGaugeMetric(p, otherSys, nrmetrics.MetricConfig{Name: "Memory/Misc/Other", Unit: "bytes", Value: true})
+
+	nrmetrics.AddGaugeMetric(p, heapObjects, nrmetrics.MetricConfig{Name: "Memory/Events/Allocated Heap Objects", Unit: "objects", Value: true})
 
 	nrmetrics.AddMeterMetric(p, pointerLookups, nrmetrics.MetricConfig{
 		Name:   "Memory/Events/Pointer Lookups",
@@ -106,7 +113,10 @@ func addMemoryMetrics(p *newrelic.Plugin) {
 type memReader struct {
 	sampleRate time.Duration
 	allocInUse metrics.Gauge
-	allocTotal metrics.Gauge
+	sys        metrics.Gauge
+
+	lastAllocTotal uint64
+	allocTotal     metrics.Gauge
 
 	lastPointerLookups uint64
 	pointerLookups     metrics.Meter
@@ -149,7 +159,8 @@ func (mr *memReader) updateMetrics() {
 	runtime.ReadMemStats(&memStats)
 
 	mr.allocInUse.Update(int64(memStats.Alloc))
-	mr.allocTotal.Update(int64(memStats.TotalAlloc))
+	mr.allocTotal.Update(int64(memStats.TotalAlloc - mr.lastAllocTotal))
+	mr.lastAllocTotal = memStats.TotalAlloc
 
 	mr.pointerLookups.Mark(int64(memStats.Lookups - mr.lastPointerLookups))
 	mr.lastPointerLookups = memStats.Lookups
