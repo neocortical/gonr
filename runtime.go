@@ -78,6 +78,7 @@ func (pr *procReader) updateProcMap() {
 	path := fmt.Sprintf("/proc/%d/status", os.Getpid())
 	rawStatus, err := ioutil.ReadFile(path)
 	if err != nil {
+		newrelic.Log(newrelic.LogError, "unable to read /proc/%d/status: %v", os.Getpid(), err)
 		return
 	}
 
@@ -129,11 +130,11 @@ func parseMemValue(val string) int64 {
 	}
 	switch parts[1] {
 	case "kB":
-		result *= 1024
+		result *= 1 << 10
 	case "mB":
-		result *= 1048576
+		result *= 1 << 20
 	case "gB":
-		result *= 1073741824
+		result *= 1 << 30
 	}
 	return result
 }
